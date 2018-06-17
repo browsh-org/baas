@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEFAULTS_FILE=/etc/browsh-swarm-defaults.conf
+DEFAULTS_FILE=/etc/browsh/swarm-defaults.conf
 DEFAULT_OS_IMAGE=https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20180105
 DEFAULT_ZONE=us-east1-b
 NODE_PREFIX="browshswarmnode"
@@ -12,7 +12,7 @@ maintain_swarm () {
   if [ $node_count -eq 0 ];
   then
     create_swarm
-  elif [ $node_count -lt $node_count_target ];
+  elif [ $node_count -lt $node_target_count ];
   then
     add_node
   fi
@@ -35,10 +35,10 @@ pull_browsh_docker_image () {
   docker pull browsh-org/browsh
 }
 
-
 node_command() {
   echo "Running '$2' on $1 ..."
   last_ssh_output=$(docker-machine ssh $1 "$2")
+  echo "Output: $last_ssh_output END"
 }
 
 # Start a fresh Swarm from nothing.
@@ -64,7 +64,7 @@ get_join_credentials() {
   a_manager_ip=$(docker-machine ip $a_manager_node)
   _get_token="docker swarm join-token manager --quiet"
   node_command $a_manager_node "$_get_token"
-  swarm_token=$last_ssh_output
+  swarm_token=$(echo $last_ssh_output | tr -d '[:space:]')
 }
 
 node_join_swarm() {
@@ -110,7 +110,7 @@ daemonise () {
   done
 }
 
-if [ "$1"=="-once" ]
+if [ "$1" = "-once" ]
 then
   echo "Running maintenance one time only..."
   maintain_swarm

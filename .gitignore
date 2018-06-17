@@ -1,0 +1,7 @@
+vendor
+browsh-ssh-server
+browsh_id_rsa*
+baas
+etc/*
+.docker_machine/*
+
