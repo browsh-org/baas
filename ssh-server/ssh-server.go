@@ -50,8 +50,6 @@ func setupChildProcess(commandSentWithSSHSession []string) *exec.Cmd {
 	child.Env = append(child.Env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	child.Env = append(child.Env, "HOME=/home/user")
 	child.Env = append(child.Env, "SHELL=/usr/bin/bash")
-	child.Env = append(child.Env, "GOOGLE_APPLICATION_CREDENTIALS=" + os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-	child.Env = append(child.Env, "GCLOUD_PROJECT_ID=" + os.Getenv("GCLOUD_PROJECT_ID"))
 
 	return child
 }
