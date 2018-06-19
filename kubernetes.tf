@@ -180,9 +180,10 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           name = "browsh-ssh-rsa-key"
           secret {
             secret_name = "browsh-ssh-rsa-key"
+            default_mode = 0444
             items {
               key = "id_rsa_private_key"
-              path = "/etc/browsh/browsh_id_rsa"
+              path = "/app/id_rsa"
             }
           }
         }

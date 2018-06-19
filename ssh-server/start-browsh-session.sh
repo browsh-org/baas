@@ -25,4 +25,4 @@ fi
 echo "Startup URL: $BROWSH_URL"
 echo "Please wait..."
 
-command
+eval $command
