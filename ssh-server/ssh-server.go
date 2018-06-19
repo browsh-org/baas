@@ -17,9 +17,10 @@ import (
 
 var (
 	sshSession      ssh.Session
-	googleProjectID = os.Getenv("GOOGLE_PROJECT_ID")
 	port            = flag.Int("port", 22, "SSH server port")
 	hostKeyFilePath = flag.String("host-key", "/etc/browsh/browsh_id_rsa", "ID RSA SSH Host key")
+	serverAvailableFlagPath = "/tmp/browsh-ssh-server-available"
+	isServerBusy = false
 )
 
 func setupChildProcess(commandSentWithSSHSession []string) *exec.Cmd {
@@ -41,16 +42,12 @@ func setupChildProcess(commandSentWithSSHSession []string) *exec.Cmd {
 		}
 	}
 
-	// Set the user:group to `user:docker`
-	child.SysProcAttr = &syscall.SysProcAttr{}
-	child.SysProcAttr.Credential = &syscall.Credential{Uid: 1000, Gid: 999}
 	// TODO: Shouldn't most of these be automatically set?
 	child.Env = append(child.Env, "TERM=xterm-256color")
 	child.Env = append(child.Env, "LC_ALL=en_US.UTF-8")
 	child.Env = append(child.Env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	child.Env = append(child.Env, "HOME=/home/user")
 	child.Env = append(child.Env, "SHELL=/usr/bin/bash")
-
 	return child
 }
 
@@ -76,29 +73,63 @@ func startPTY(sshSession ssh.Session, child *exec.Cmd, winCh <-chan ssh.Window) 
 }
 
 func startSSHServer() {
-	ssh.Handle(func(sshSessionScoped ssh.Session) {
-		sshSession = sshSessionScoped
-		log.Println("New SSH session:",
-			map[string]interface{}{
-				"address": sshSession.RemoteAddr(),
-				"user":    sshSession.User(),
-				"command": sshSession.Command(),
-			},
-		)
-		var child = setupChildProcess(sshSession.Command())
-		child.Env = append(child.Env, "BROWSH_USER=" + sshSession.User())
-		_, winCh, isPty := sshSession.Pty()
-		if isPty {
-			startPTY(sshSession, child, winCh)
-		} else {
-			io.WriteString(sshSession, "No PTY requested.\n")
-			sshSession.Exit(1)
-		}
-	})
-
+	ssh.Handle(handleSSHConnection)
 	portString := strconv.Itoa(*port)
 	log.Println("Starting Browsh-dedicated SSH server on port " + portString)
+	markServerAvailable()
 	ssh.ListenAndServe(":"+portString, nil, ssh.HostKeyFile(*hostKeyFilePath))
+}
+
+func handleSSHConnection(sshSessionScoped ssh.Session) {
+	sshSession = sshSessionScoped
+	if (isServerBusy) {
+		io.WriteString(
+			sshSession,
+			"Only one connection allowed per container instance.\n")
+		sshSession.Exit(0)
+	}
+	markServerBusy()
+	log.Println("New SSH session:",
+		map[string]interface{}{
+			"address": sshSession.RemoteAddr(),
+			"user":    sshSession.User(),
+			"command": sshSession.Command(),
+		},
+	)
+	var child = setupChildProcess(sshSession.Command())
+	child.Env = append(child.Env, "SSH_USER=" + sshSession.User())
+	_, winCh, isPty := sshSession.Pty()
+	if isPty {
+		startPTY(sshSession, child, winCh)
+	} else {
+		io.WriteString(sshSession, "No PTY requested.\n")
+		sshSession.Exit(1)
+	}
+	markServerAvailable()
+}
+
+// A Browsh process can only handle one connection at a time. So we need a way to tell the
+// outisde cluster, namely the load balancer, not to send any more requests if there is an
+// existing session underway.
+func markServerAvailable() {
+	isServerBusy = false
+	if _, err := os.Stat(serverAvailableFlagPath); os.IsNotExist(err) {
+		var file, err = os.Create(serverAvailableFlagPath)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		defer file.Close()
+	}
+}
+
+func markServerBusy() {
+	isServerBusy = true
+	if _, err := os.Stat(serverAvailableFlagPath); err == nil {
+		var err = os.Remove(serverAvailableFlagPath)
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
 }
 
 func main() {

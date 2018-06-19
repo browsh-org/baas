@@ -11,6 +11,3 @@ cd $GOPATH/src/github.com/sl1pm4t/terraform-provider-kubernetes
 make build
 cp $GOPATH/bin/terraform-provider-kubernetes $PROJECT_ROOT/.terraform/plugins/linux_amd64
 ```
-
-Then when initialising Terraform, use:
-`terraform init `

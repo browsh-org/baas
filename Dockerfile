@@ -43,14 +43,12 @@ RUN dep ensure
 RUN go build -o browsh-ssh-server ssh-server.go
 
 # Now wrap the SSH server image around the original Browsh Docker image
-FROM tombh/texttop:v1.1.0
+ARG BROWSH_VERSION_TAG
+FROM tombh/texttop${BROWSH_VERSION_TAG}
 
 # Copy the SSH server built in the previous stage.
 COPY --from=0 /go/src/browsh_ssh_server/browsh-ssh-server /usr/local/bin
 COPY --from=0 /usr/local/bin/mosh-server /usr/local/bin
-
-# So that we don't run the Browsh session as root
-RUN useradd -m user
 
 RUN install_packages \
       locales \
@@ -67,13 +65,13 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     update-locale LANG=en_US.UTF-8
 ENV LANG en_US.UTF-8
 
-# Logging client for Google's Stackdriver logging service
-RUN curl -L -o /usr/local/bin/gcloud_logger https://github.com/tombh/gcloud_pipe_logger/releases/download/v0.0.5/gcloud_pipe_logger_0.0.5_linux_amd64
-RUN chmod a+x /usr/local/bin/gcloud_logger
-
-# A small script to launch a Browsh session once a user connects via SSH
+RUN mkdir /app
+WORKDIR /app
 ADD ssh-server/start-browsh-session.sh /usr/local/bin/
-
 ADD ssh-server/browsh-ssh-server /usr/local/bin/
+ADD .browsh_version /app
+RUN useradd -m user
+USER user
+RUN touch /app/debug.log
 
-CMD ["browsh-ssh-server"] # && tailf /app/debug.log
+CMD tail -f /app/debug.log &; browsh-ssh-server
