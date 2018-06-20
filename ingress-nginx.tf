@@ -8,6 +8,41 @@ resource "kubernetes_namespace" "nginx-namespace" {
   }
 }
 
+# This is the standard definition of an Ingress. Even though we're using a less
+# standard nginx Ingress, this definition is still needed.
+resource "kubernetes_ingress" "browsh-ingress" {
+  metadata {
+    name = "browsh-ingress"
+    annotations {
+      "kubernetes.io/ingress.global-static-ip-name" = "browsh-static-ip"
+      # This tells GCE to create a L4 TCP load balancer rather than the standard
+      # L7 HTTP load balancer.
+      "kubernetes.io/ingress.class" = "nginx"
+    }
+  }
+
+  # Theoretically these could be applied in the nginx config map?
+  # But the HTTP syntax is nicer here.
+  spec {
+    backend {
+      service_name = "browsh-http-server"
+      service_port = 80
+    }
+    rule {
+      host = "html.brow.sh"
+      http {
+        path {
+          path_regex = "/"
+          backend {
+            service_name = "browsh-http-server"
+            service_port = 80
+          }
+        }
+      }
+    }
+  }
+}
+
 # A default backend for unmatched routes
 resource "kubernetes_deployment" "default-backend" {
   metadata {
@@ -23,9 +58,6 @@ resource "kubernetes_deployment" "default-backend" {
         }
       }
       spec {
-        node_selector {
-          node-type = "long-lived"
-        }
         termination_grace_period_seconds = 60
         container {
           name = "default-backend"
@@ -76,7 +108,7 @@ resource "kubernetes_service" "default-backend" {
 }
 
 # All the Nginx-specific config that Kubernetes' Ingress does not support
-resource "kubernetes_config_map" "example" {
+resource "kubernetes_config_map" "nginx-ingress-config" {
   metadata {
     name = "nginx-ingress-controller-conf"
     namespace = "nginx"
@@ -128,9 +160,6 @@ resource "kubernetes_deployment" "nginx-controller" {
         }
       }
       spec {
-        node_selector {
-          node-type = "long-lived"
-        }
         termination_grace_period_seconds = 60
         container {
           name = "nginx-ingress-controller"

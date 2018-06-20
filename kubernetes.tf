@@ -23,7 +23,12 @@ resource "google_container_node_pool" "browsh-node-pool" {
     machine_type = "n1-standard-2"
     preemptible = "true"
     labels {
-      node-type = "ephemeral"
+      node-type = "preemptible"
+    }
+    taint {
+      key = "life_time"
+      value = "preemptible"
+      effect = "NO_SCHEDULE"
     }
   }
 
@@ -46,14 +51,16 @@ resource "google_container_node_pool" "long-lived-node-pool" {
 
   node_config {
     machine_type = "g1-small"
-    labels {
-      node-type = "long-lived"
-    }
   }
 
   management {
     auto_repair  = true
     auto_upgrade = true
+  }
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 4
   }
 }
 
@@ -64,35 +71,6 @@ provider kubernetes {
   client_certificate     = "${base64decode(google_container_cluster.primary.master_auth.0.client_certificate)}"
   client_key             = "${base64decode(google_container_cluster.primary.master_auth.0.client_key)}"
   cluster_ca_certificate = "${base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)}"
-}
-
-resource "kubernetes_ingress" "browsh-ingress" {
-  metadata {
-    name = "browsh-ingress"
-    annotations {
-      "kubernetes.io/ingress.global-static-ip-name" = "browsh-static-ip"
-      "kubernetes.io/ingress.class" = "nginx"
-    }
-  }
-
-  spec {
-    backend {
-      service_name = "browsh-http-server"
-      service_port = 80
-    }
-    rule {
-      host = "html.brow.sh"
-      http {
-        path {
-          path_regex = "/"
-          backend {
-            service_name = "browsh-http-server"
-            service_port = 80
-          }
-        }
-      }
-    }
-  }
 }
 
 resource "kubernetes_deployment" "browsh-http-server" {
@@ -112,6 +90,9 @@ resource "kubernetes_deployment" "browsh-http-server" {
         }
       }
       spec {
+        node_selector {
+          node-type = "preemptible"
+        }
         container {
           image = "tombh/texttop:v${chomp(file(".browsh_version"))}"
           name  = "app"
@@ -162,6 +143,15 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
         }
       }
       spec {
+        node_selector {
+          node-type = "preemptible"
+        }
+        toleration {
+          key = "life_time"
+          operator = "Equal"
+          value = "preemptible"
+          effect = "NoSchedule"
+        }
         container {
           image = "browh-org/baas:v0.0.1"
           name  = "app"
