@@ -69,7 +69,7 @@ resource "kubernetes_config_map" "nginx-ingress-tcp-config" {
     }
   }
   data {
-    "22" = "default/browsh-ssh-server:2222"
+    "22" = "default/browsh-ssh-server:22"
   }
   depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
