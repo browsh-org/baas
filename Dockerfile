@@ -68,4 +68,4 @@ ADD ssh-server/start-browsh-session.sh /usr/local/bin/
 ADD .browsh_version /app
 RUN touch /app/debug.log
 
-CMD tail -f /app/debug.log & browsh-ssh-server 2>&1
+CMD tail -f /app/debug.log & browsh-ssh-server -host-key /etc/browsh/id_rsa 2>&1

@@ -7,8 +7,25 @@ resource "google_container_cluster" "primary" {
   name = "browsh-cluster"
   # https://cloud.google.com/compute/docs/regions-zones/
   zone = "asia-southeast1-a"
-  remove_default_node_pool = true
-  initial_node_count = 3
+  lifecycle {
+    # I don't quite understand why ignoring "node_pool" is needed, but without
+    # it autoscaling causes a diff that means that whole cluster gets rebuilt!
+    ignore_changes = ["node_count", "node_pool"]
+  }
+  node_pool {
+    name       = "default-pool"
+    node_config {
+      machine_type = "g1-small"
+    }
+    management {
+      auto_repair  = true
+      auto_upgrade = true
+    }
+    autoscaling {
+      min_node_count = 1
+      max_node_count = 4
+    }
+  }
 }
 
 resource "google_container_node_pool" "browsh-node-pool" {
@@ -43,27 +60,6 @@ resource "google_container_node_pool" "browsh-node-pool" {
   }
 }
 
-resource "google_container_node_pool" "long-lived-node-pool" {
-  name = "long-lived-node-pool"
-  cluster = "${google_container_cluster.primary.name}"
-  zone = "asia-southeast1-a"
-  node_count = 1
-
-  node_config {
-    machine_type = "g1-small"
-  }
-
-  management {
-    auto_repair  = true
-    auto_upgrade = true
-  }
-
-  autoscaling {
-    min_node_count = 1
-    max_node_count = 4
-  }
-}
-
 provider kubernetes {
   host     = "${google_container_cluster.primary.endpoint}"
   username = "${google_container_cluster.primary.master_auth.0.username}"
@@ -79,7 +75,7 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   spec {
-    replicas = 3
+    replicas = 2
     selector {
       app = "browsh-http-server"
     }
@@ -101,6 +97,12 @@ resource "kubernetes_deployment" "browsh-http-server" {
           port {
             container_port = 4333
           }
+        }
+        toleration {
+          key = "life_time"
+          operator = "Equal"
+          value = "preemptible"
+          effect = "NoSchedule"
         }
       }
     }
@@ -146,36 +148,64 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
         node_selector {
           node-type = "preemptible"
         }
+        container {
+          #image = "tombh/baas:latest"
+          image = "gcr.io/browsh-193210/baas"
+          image_pull_policy = "Always"
+          name  = "app"
+          port {
+            container_port = 2222
+          }
+          readiness_probe {
+            exec {
+              command = ["cat", "/tmp/browsh-ssh-server-available"]
+            }
+            initial_delay_seconds = 6
+            period_seconds = 1
+          }
+          volume_mount {
+            name = "rw-config"
+            mount_path = "/etc/browsh"
+          }
+        }
         toleration {
           key = "life_time"
           operator = "Equal"
           value = "preemptible"
           effect = "NoSchedule"
         }
-        container {
-          image = "browh-org/baas:v0.0.1"
-          name  = "app"
-          port {
-            container_port = 22
+        init_container {
+          name = "fix-perms"
+          image = "busybox"
+          command = [
+            "sh",
+            "-c",
+            "cp /etc/browsh-ro/id_rsa /etc/browsh && /bin/chmod 600 /etc/browsh/id_rsa && /bin/chown 1000 /etc/browsh/id_rsa"
+          ]
+          volume_mount {
+            name = "browsh-ssh-rsa-key"
+            mount_path = "/etc/browsh-ro"
           }
-          readiness_probe {
-            exec {
-              command = ["cat", "/tmp/browsh-ssh-server-available"]
-            }
-            initial_delay_seconds = 5
-            period_seconds = 1
+          volume_mount {
+            name = "rw-config"
+            mount_path = "/etc/browsh"
+          }
+          security_context {
+            run_as_user = 0
           }
         }
         volume {
           name = "browsh-ssh-rsa-key"
           secret {
             secret_name = "browsh-ssh-rsa-key"
-            default_mode = 0444
             items {
               key = "id_rsa_private_key"
-              path = "/app/id_rsa"
+              path = "id_rsa"
             }
           }
+        }
+        volume {
+          name = "rw-config"
         }
       }
     }
@@ -208,5 +238,32 @@ resource "kubernetes_service" "browsh-ssh-server" {
     }
 
     type = "NodePort"
+  }
+}
+
+resource "kubernetes_ingress" "browsh-ingress" {
+  metadata {
+    name = "browsh-ingress"
+    annotations {
+      "kubernetes.io/ingress.class" = "nginx"
+    }
+  }
+  spec {
+    backend {
+      service_name = "browsh-http-server"
+      service_port = 80
+    }
+    rule {
+      host = "html.brow.sh"
+      http {
+        path {
+          path_regex = "/"
+          backend {
+            service_name = "browsh-http-server"
+            service_port = 80
+          }
+        }
+      }
+    }
   }
 }

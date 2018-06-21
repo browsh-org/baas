@@ -1,0 +1,9 @@
+# Just useful for quickly testing out a new build on GCE/Kubernetes without having
+# to commit to Github and wait for hub.docker.com to finish.
+# gcloud container builds submit --config gce-docker-builder.yaml .
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '--build-arg', 'BROWSH_IMAGE_TAG=:v1.1.2', '-t', 'gcr.io/browsh-193210/baas', '.' ]
+images:
+- 'gcr.io/browsh-193210/baas'
+

@@ -2,3 +2,4 @@ vendor
 etc/*
 terraform*
 .terraform/*
+*.log

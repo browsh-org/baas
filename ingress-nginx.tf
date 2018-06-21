@@ -1,55 +1,89 @@
 # Initial inspiration came from;
 # https://akomljen.com/kubernetes-nginx-ingress-controller/
 
-# All Nginx resources need to be under a their own namespace
-resource "kubernetes_namespace" "nginx-namespace" {
+# All Nginx Ingress resources need to be under a their own namespace
+resource "kubernetes_namespace" "nginx-ingress-namespace" {
   metadata {
-    name = "nginx"
+    name = "ingress"
   }
 }
 
-# This is the standard definition of an Ingress. Even though we're using a less
-# standard nginx Ingress, this definition is still needed.
-resource "kubernetes_ingress" "browsh-ingress" {
+resource "kubernetes_service_account" "nginx-ingress-service-account" {
   metadata {
-    name = "browsh-ingress"
+    name = "nginx"
+    namespace = "ingress"
+  }
+}
+
+resource "kubernetes_ingress" "nginx-ingress" {
+  metadata {
+    name = "nginx-ingress"
+    namespace = "ingress"
     annotations {
-      "kubernetes.io/ingress.global-static-ip-name" = "browsh-static-ip"
-      # This tells GCE to create a L4 TCP load balancer rather than the standard
-      # L7 HTTP load balancer.
       "kubernetes.io/ingress.class" = "nginx"
     }
   }
-
-  # Theoretically these could be applied in the nginx config map?
-  # But the HTTP syntax is nicer here.
   spec {
     backend {
-      service_name = "browsh-http-server"
+      service_name = "default-backend"
       service_port = 80
     }
     rule {
-      host = "html.brow.sh"
+      host = "lb.brow.sh"
       http {
         path {
-          path_regex = "/"
+          path_regex = "/nginx_status"
           backend {
-            service_name = "browsh-http-server"
-            service_port = 80
+            service_name = "nginx-ingress"
+            service_port = 18080
           }
         }
       }
     }
   }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
+}
+
+# All the Nginx-specific config that Kubernetes' Ingress does not support
+resource "kubernetes_config_map" "nginx-ingress-main-config" {
+  metadata {
+    name = "nginx-ingress-controller-conf"
+    namespace = "ingress"
+    labels {
+      app = "nginx-ingress-lb"
+    }
+  }
+  data {
+    enable-vts-status = true
+  }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
+}
+
+# TCP-specific load balancing rules
+resource "kubernetes_config_map" "nginx-ingress-tcp-config" {
+  metadata {
+    name = "nginx-ingress-tcp-conf"
+    namespace = "ingress"
+    labels {
+      app = "nginx-ingress-lb"
+    }
+  }
+  data {
+    "22" = "default/browsh-ssh-server:2222"
+  }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
 
 # A default backend for unmatched routes
 resource "kubernetes_deployment" "default-backend" {
   metadata {
     name = "default-backend"
-    namespace = "nginx"
+    namespace = "ingress"
   }
   spec {
+    selector {
+      app = "default-backend"
+    }
     replicas = 2
     template {
       metadata {
@@ -88,12 +122,13 @@ resource "kubernetes_deployment" "default-backend" {
       }
     }
   }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
 
 resource "kubernetes_service" "default-backend" {
   metadata {
     name = "default-backend"
-    namespace = "nginx"
+    namespace = "ingress"
   }
   spec {
     port {
@@ -105,42 +140,7 @@ resource "kubernetes_service" "default-backend" {
       app = "default-backend"
     }
   }
-}
-
-# All the Nginx-specific config that Kubernetes' Ingress does not support
-resource "kubernetes_config_map" "nginx-ingress-config" {
-  metadata {
-    name = "nginx-ingress-controller-conf"
-    namespace = "nginx"
-    labels {
-      app = "nginx-ingress-lb"
-    }
-  }
-  data {
-    enable-vts-status = true
-  }
-}
-
-# A route to the Nginx status page
-resource "kubernetes_ingress" "nginx-status" {
-  metadata {
-    name = "nginx-status"
-    namespace = "nginx"
-  }
-  spec {
-    rule {
-      host = "lb.brow.sh"
-      http {
-        path {
-          path_regex = "/nginx_status"
-          backend {
-            service_name = "nginx-ingress"
-            service_port = 18080
-          }
-        }
-      }
-    }
-  }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
 
 # The Nginx controller, the heart of load balancing and routing. It is however not the most
@@ -148,9 +148,12 @@ resource "kubernetes_ingress" "nginx-status" {
 resource "kubernetes_deployment" "nginx-controller" {
   metadata {
     name = "nginx-ingress-controller"
-    namespace = "nginx"
+    namespace = "ingress"
   }
   spec {
+    selector {
+      app = "nginx-ingress-lb"
+    }
     replicas = 1
     revision_history_limit = 3
     template {
@@ -160,10 +163,11 @@ resource "kubernetes_deployment" "nginx-controller" {
         }
       }
       spec {
+        service_account_name = "nginx"
         termination_grace_period_seconds = 60
         container {
           name = "nginx-ingress-controller"
-          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.9.0"
+          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.15.0"
           image_pull_policy = "Always"
           readiness_probe {
             http_get {
@@ -185,6 +189,8 @@ resource "kubernetes_deployment" "nginx-controller" {
             "/nginx-ingress-controller",
             "--default-backend-service=$(POD_NAMESPACE)/default-backend",
             "--configmap=$(POD_NAMESPACE)/nginx-ingress-controller-conf",
+            "--tcp-services-configmap=$(POD_NAMESPACE)/nginx-ingress-tcp-conf",
+            "--publish-service=$(POD_NAMESPACE)/nginx-ingress",
             "--v=2"
           ]
           env {
@@ -213,15 +219,19 @@ resource "kubernetes_deployment" "nginx-controller" {
       }
     }
   }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
 
 resource "kubernetes_service" "nginx-ingress-loadbalancer" {
   metadata {
     name = "nginx-ingress"
-    namespace = "nginx"
+    namespace = "ingress"
   }
   spec {
-    type = "NodePort"
+    type = "LoadBalancer"
+    # If you end up needing the original client IP somewhere, use this:
+    # kubectl patch svc nginx-ingress -p '{"spec":{"externalTrafficPolicy":"Local"}}'
+    load_balancer_ip = "35.197.149.86"
     port {
       port = 80
       node_port = 30000
@@ -236,5 +246,5 @@ resource "kubernetes_service" "nginx-ingress-loadbalancer" {
       app = "nginx-ingress-lb"
     }
   }
+  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
-
