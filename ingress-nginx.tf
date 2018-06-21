@@ -231,7 +231,11 @@ resource "kubernetes_service" "nginx-ingress-loadbalancer" {
     type = "LoadBalancer"
     # If you end up needing the original client IP somewhere, use this:
     # kubectl patch svc nginx-ingress -p '{"spec":{"externalTrafficPolicy":"Local"}}'
-    load_balancer_ip = "35.197.149.86"
+    load_balancer_ip = "35.240.197.236"
+    port {
+      port = 22
+      name = "ssh"
+    }
     port {
       port = 80
       node_port = 30000

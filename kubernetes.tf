@@ -93,7 +93,6 @@ resource "kubernetes_deployment" "browsh-http-server" {
           image = "tombh/texttop:v${chomp(file(".browsh_version"))}"
           name  = "app"
           command = ["/app/browsh", "-http-server", "-debug"]
-
           port {
             container_port = 4333
           }
@@ -160,7 +159,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
             exec {
               command = ["cat", "/tmp/browsh-ssh-server-available"]
             }
-            initial_delay_seconds = 6
+            initial_delay_seconds = 5
             period_seconds = 1
           }
           volume_mount {
@@ -234,7 +233,7 @@ resource "kubernetes_service" "browsh-ssh-server" {
 
     port {
       port        = 22
-      target_port = 22
+      target_port = 2222
     }
 
     type = "NodePort"
