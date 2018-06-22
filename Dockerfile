@@ -55,6 +55,7 @@ COPY --from=0 /usr/local/bin/mosh-server /usr/local/bin
 USER root
 RUN install_packages \
       locales \
+      libprotobuf10 \
       htop \
       netcat
 
@@ -66,6 +67,7 @@ ENV LANG en_US.UTF-8
 USER user
 ADD ssh-server/start-browsh-session.sh /usr/local/bin/
 ADD .browsh_version /app
-RUN touch /app/debug.log
+RUN touch /app/debug.log && echo "Browsh logs start" > /app/debug.log
 
-CMD tail -f /app/debug.log & browsh-ssh-server -host-key /etc/browsh/id_rsa 2>&1
+CMD tail -f /app/debug.log & browsh-ssh-server -host-key /etc/browsh/id_rsa
+
