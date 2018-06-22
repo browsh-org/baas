@@ -102,11 +102,14 @@ func startSSHServer() {
 
 func handleSSHConnection(sshSessionScoped ssh.Session) {
 	sshSession = sshSessionScoped
+	// This relies on the reliability of Nginx-Ingress' `least-conn` loadbalancing
+	// alogrithm.
 	if (isServerBusy) {
 		io.WriteString(
 			sshSession,
-			"Only one connection allowed per container instance.\n")
+			"All of Browsh's servers are currently busy. Please try again soon.\n")
 		sshSession.Exit(0)
+		return
 	}
 	markServerBusy()
 	log.Println("New SSH session:",
@@ -123,9 +126,28 @@ func handleSSHConnection(sshSessionScoped ssh.Session) {
 		startPTY(sshSession, child, winCh)
 	} else {
 		io.WriteString(sshSession, "No PTY requested.\n")
+		markServerAvailable()
 		sshSession.Exit(1)
+		return
 	}
+
+	killFirefox()
+	// TODO: Also remove profile
 	markServerAvailable()
+}
+
+func killFirefox() {
+	cmd := "kill $(ps aux|grep headless|tr -s ' ' | cut -d ' ' -f2)"
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if string(out) != "" {
+		log.Println("Killed Firefox: " + string(out))
+	}
+	if err != nil {
+		log.Println("Error killing Firefox")
+		log.Println(err)
+		out, _ := exec.Command("ps", "aux").Output()
+		log.Println("ps aux: \n" + string(out))
+	}
 }
 
 // A Browsh process can only handle one connection at a time. So we need a way to tell the
