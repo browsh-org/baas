@@ -155,13 +155,6 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           port {
             container_port = 2222
           }
-          readiness_probe {
-            exec {
-              command = ["cat", "/tmp/browsh-ssh-server-available"]
-            }
-            initial_delay_seconds = 5
-            period_seconds = 1
-          }
           volume_mount {
             name = "rw-config"
             mount_path = "/etc/browsh"
