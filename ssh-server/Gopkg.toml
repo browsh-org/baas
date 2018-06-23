@@ -23,8 +23,8 @@
 
 [[constraint]]
   name = "github.com/gliderlabs/ssh"
-  version = "0.1.0"
+  version = "0.1.1"
 
 [[constraint]]
   name = "github.com/kr/pty"
-  version = "1.1.1"
+  version = "1.1.2"

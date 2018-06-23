@@ -10,20 +10,20 @@
 [[projects]]
   name = "github.com/gliderlabs/ssh"
   packages = ["."]
-  revision = "f3131153bc4db6b584b40a18491d9e78cdcba314"
-  version = "v0.1.0"
+  revision = "d3a6756290240931faaf90ec97ddd5d9290623d8"
+  version = "v0.1.1"
 
 [[projects]]
   name = "github.com/kr/pty"
   packages = ["."]
-  revision = "282ce0e5322c82529687d609ee670fac7c7d917c"
-  version = "v1.1.1"
+  revision = "fa756f09eeb418bf1cc6268c66ceaad9bb98f598"
+  version = "v1.1.2"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["curve25519","ed25519","ed25519/internal/edwards25519","internal/chacha20","poly1305","ssh"]
-  revision = "0efb9460aaf800c6376acf625be2853bceac2e06"
+  packages = ["curve25519","ed25519","ed25519/internal/edwards25519","internal/chacha20","internal/subtle","poly1305","ssh"]
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [solve-meta]
   analyzer-name = "dep"
