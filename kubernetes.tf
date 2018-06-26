@@ -5,6 +5,7 @@ provider "google" {
 
 resource "google_container_cluster" "primary" {
   name = "browsh-cluster"
+  network = "projects/browsh-193210/global/networks/default"
   # https://cloud.google.com/compute/docs/regions-zones/
   zone = "asia-southeast1-a"
   lifecycle {
@@ -32,7 +33,7 @@ resource "google_container_node_pool" "browsh-node-pool" {
   name = "browsh-node-pool"
   cluster = "${google_container_cluster.primary.name}"
   zone = "asia-southeast1-a"
-  node_count = 3
+  node_count = 2
 
   # NB. changes to this destroy the entire node pool
   node_config {
@@ -108,28 +109,13 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 }
 
-resource "kubernetes_service" "browsh-http-server" {
-  metadata {
-    name = "browsh-http-server"
-  }
-
-  spec {
-    selector {
-      app = "browsh-http-server"
-    }
-
-    port {
-      port        = 80
-      target_port = 4333
-    }
-
-    type = "NodePort"
-  }
-}
-
 resource "kubernetes_deployment" "browsh-ssh-server" {
   metadata {
     name = "browsh-ssh-server"
+  }
+
+  lifecycle {
+    ignore_changes = ["date"]
   }
 
   spec {
@@ -198,6 +184,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
         }
         volume {
           name = "rw-config"
+          empty_dir = {}
         }
       }
     }
@@ -237,7 +224,8 @@ resource "kubernetes_ingress" "browsh-ingress" {
   metadata {
     name = "browsh-ingress"
     annotations {
-      "kubernetes.io/ingress.class" = "nginx"
+      "kubernetes.io/ingress.class" = "gce"
+      "kubernetes.io/ingress.global-static-ip-name" = "browsh-http-server"
     }
   }
   spec {
@@ -256,6 +244,24 @@ resource "kubernetes_ingress" "browsh-ingress" {
           }
         }
       }
+    }
+  }
+}
+
+resource "kubernetes_service" "browsh-http-server" {
+  metadata {
+    name = "browsh-http-server"
+  }
+
+  spec {
+    type = "NodePort"
+    selector {
+      app = "browsh-http-server"
+    }
+
+    port {
+      port        = 80
+      target_port = 4333
     }
   }
 }

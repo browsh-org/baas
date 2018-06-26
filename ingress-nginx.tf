@@ -252,3 +252,4 @@ resource "kubernetes_service" "nginx-ingress-loadbalancer" {
   }
   depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
+
