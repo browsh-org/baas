@@ -12,6 +12,18 @@ make build
 cp $GOPATH/bin/terraform-provider-kubernetes $PROJECT_ROOT/.terraform/plugins/linux_amd64
 ```
 
+Then patch at kubernetes/resource_kubernetes_deployment.go:375
+```golang
+if name == "browsh-http-server" || name == "browsh-ssh-server" {
+  cmd := "echo '" + string(data) + "' | ruby patch_toleration.rb"
+  output, err := exec.Command("bash", "-c", cmd).Output()
+  if err != nil {
+    panic("tombh hack failed")
+  }
+  data = output
+}
+```
+
 After applying everything you also currently need to:
   1. Manually apply the Cluster Roles, see `nginx-ingress-controller.yaml`
 
