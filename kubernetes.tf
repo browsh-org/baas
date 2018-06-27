@@ -114,9 +114,10 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
     name = "browsh-ssh-server"
   }
 
-  lifecycle {
-    ignore_changes = ["date"]
-  }
+  # This causes a crash :/
+  #lifecycle {
+    #ignore_changes = ["spec.0.template.0.metadata.0.labels.date"]
+  #}
 
   spec {
     replicas = 3
@@ -220,6 +221,17 @@ resource "kubernetes_service" "browsh-ssh-server" {
   }
 }
 
+resource "kubernetes_secret" "browsh-tls" {
+  metadata {
+    name = "browsh-tls"
+  }
+  data {
+    tls.crt = "${file("etc/browsh-tls.crt")}"
+    tls.key = "${file("etc/browsh-tls.key")}"
+  }
+}
+
+// It seems like changes to this might disbale the CDN
 resource "kubernetes_ingress" "browsh-ingress" {
   metadata {
     name = "browsh-ingress"
@@ -229,12 +241,27 @@ resource "kubernetes_ingress" "browsh-ingress" {
     }
   }
   spec {
+    tls {
+      secret_name = "browsh-tls"
+    }
     backend {
       service_name = "browsh-http-server"
       service_port = 80
     }
     rule {
       host = "html.brow.sh"
+      http {
+        path {
+          path_regex = "/"
+          backend {
+            service_name = "browsh-http-server"
+            service_port = 80
+          }
+        }
+      }
+    }
+    rule {
+      host = "text.brow.sh"
       http {
         path {
           path_regex = "/"
@@ -260,7 +287,13 @@ resource "kubernetes_service" "browsh-http-server" {
     }
 
     port {
+      name = "http"
       port        = 80
+      target_port = 4333
+    }
+    port {
+      name = "https"
+      port        = 443
       target_port = 4333
     }
   }

@@ -15,5 +15,14 @@ cp $GOPATH/bin/terraform-provider-kubernetes $PROJECT_ROOT/.terraform/plugins/li
 After applying everything you also currently need to:
   1. Manually apply the Cluster Roles, see `nginx-ingress-controller.yaml`
 
+SSL certs:
+```
+sudo certbot certonly -d '*.brow.sh' --dns-google --dns-google-credentials etc/gce-dns-admin.json --server https://acme-v02.api.letsencrypt.org/directory
+sudo cp /etc/letsencrypt/live/brow.sh/cert.pem etc/browsh-tls.crt
+sudo cp /etc/letsencrypt/live/brow.sh/privkey.pem etc/browsh-tls.key
+terraform apply
+```
+
+
 
 
