@@ -150,9 +150,8 @@ func killFirefox() {
 	}
 }
 
-// A Browsh process can only handle one connection at a time. So we need a way to tell the
-// outisde cluster, namely the load balancer, not to send any more requests if there is an
-// existing session underway.
+// TODO: These don't have to store to a file. That's just a legacy of trying to use
+// Kubernetes' readyStatus to limit pods to 1 connection.
 func markServerAvailable() {
 	isServerBusy = false
 	if _, err := os.Stat(serverAvailableFlagPath); os.IsNotExist(err) {

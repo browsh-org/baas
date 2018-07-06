@@ -135,7 +135,6 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           node-type = "preemptible"
         }
         container {
-          #image = "tombh/baas:latest"
           image = "gcr.io/browsh-193210/baas"
           image_pull_policy = "Always"
           name  = "app"
