@@ -21,6 +21,7 @@ resource "kubernetes_ingress" "nginx-ingress" {
     namespace = "ingress"
     annotations {
       "kubernetes.io/ingress.class" = "nginx"
+      "nginx.ingress.kubernetes.io/configuration-snippet" = "if ($host = 'brow.sh' ) {return 301 https://brow.sh$request_uri;}"
     }
   }
   spec {
