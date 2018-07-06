@@ -69,5 +69,5 @@ ADD ssh-server/start-browsh-session.sh /usr/local/bin/
 ADD .browsh_version /app
 RUN touch /app/debug.log && echo "Browsh logs start" > /app/debug.log
 
-CMD tail -f /app/debug.log & browsh-ssh-server -host-key /etc/browsh/id_rsa
+CMD browsh-ssh-server -host-key /etc/browsh/id_rsa & touch /app/debug.log && tail -f /app/debug.log
 
