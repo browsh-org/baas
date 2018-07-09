@@ -55,9 +55,10 @@ resource "google_container_node_pool" "browsh-node-pool" {
     auto_upgrade = true
   }
 
+  // Changing this doesn't seem to cause any app downtime
   autoscaling {
     min_node_count = 3
-    max_node_count = 6
+    max_node_count = 20
   }
 }
 
