@@ -21,7 +21,7 @@ resource "kubernetes_ingress" "nginx-ingress" {
     namespace = "ingress"
     annotations {
       "kubernetes.io/ingress.class" = "nginx"
-      "nginx.ingress.kubernetes.io/configuration-snippet" = "if ($host = 'brow.sh' ) {return 301 https://brow.sh$request_uri;}"
+      "nginx.ingress.kubernetes.io/server-snippet" = "if ($host = 'brow.sh' ) {return 301 https://brow.sh$request_uri;}"
     }
   }
   spec {
@@ -37,6 +37,18 @@ resource "kubernetes_ingress" "nginx-ingress" {
           backend {
             service_name = "nginx-ingress"
             service_port = 18080
+          }
+        }
+      }
+    }
+    rule {
+      host = "brow.sh"
+      http {
+        path {
+          path_regex = "/*"
+          backend {
+            service_name = "default-backend"
+            service_port = 80
           }
         }
       }
