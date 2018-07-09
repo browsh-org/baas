@@ -38,7 +38,7 @@ resource "google_container_node_pool" "browsh-node-pool" {
   # NB. changes to this destroy the entire node pool
   node_config {
     # https://cloud.google.com/compute/docs/machine-types
-    machine_type = "n1-standard-2"
+    machine_type = "n1-standard-2" # 7.5Gb
     preemptible = "true"
     labels {
       node-type = "preemptible"
@@ -77,7 +77,7 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   spec {
-    replicas = 2
+    replicas = 3
     selector {
       app = "browsh-http-server"
     }
@@ -98,6 +98,16 @@ resource "kubernetes_deployment" "browsh-http-server" {
           port {
             container_port = 4333
           }
+          resources {
+            requests {
+              memory = "500Mi"
+              cpu = "250m"
+            }
+            limits {
+              memory = "4Gi"
+              cpu = "2000m"
+            }
+          }
         }
         toleration {
           key = "life_time"
@@ -110,6 +120,22 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 }
 
+resource "kubernetes_horizontal_pod_autoscaler" "http-server-sacler" {
+  metadata {
+    name = "http-server-sacler"
+  }
+  spec {
+    min_replicas = 2
+    max_replicas = 40
+    target_cpu_utilization_percentage = "80"
+    scale_target_ref {
+      kind = "Deployment"
+      name = "browsh-http-server"
+    }
+  }
+}
+
+
 resource "kubernetes_deployment" "browsh-ssh-server" {
   metadata {
     name = "browsh-ssh-server"
@@ -121,7 +147,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
   #}
 
   spec {
-    replicas = 3
+    replicas = 20
     selector {
       app = "browsh-ssh-server"
     }
@@ -145,6 +171,16 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           volume_mount {
             name = "rw-config"
             mount_path = "/etc/browsh"
+          }
+          resources {
+            requests {
+              memory = "500Mi"
+              cpu = "250m"
+            }
+            limits {
+              memory = "4Gi"
+              cpu = "2000m"
+            }
           }
         }
         toleration {
