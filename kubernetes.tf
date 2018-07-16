@@ -35,6 +35,10 @@ resource "google_container_node_pool" "browsh-node-pool" {
   zone = "asia-southeast1-a"
   node_count = 2
 
+  lifecycle {
+    ignore_changes = ["node_count", "node_pool"]
+  }
+
   # NB. changes to this destroy the entire node pool
   node_config {
     # https://cloud.google.com/compute/docs/machine-types
@@ -77,7 +81,7 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   spec {
-    replicas = 3
+    replicas = 4
     selector {
       app = "browsh-http-server"
     }
@@ -92,7 +96,8 @@ resource "kubernetes_deployment" "browsh-http-server" {
           node-type = "preemptible"
         }
         container {
-          image = "tombh/texttop:v${chomp(file(".browsh_version"))}"
+          image = "browsh/browsh:v${chomp(file(".browsh_version"))}"
+          #image = "gcr.io/browsh-193210/browsh"
           name  = "app"
           command = ["/app/browsh", "-http-server", "-debug"]
           port {
@@ -147,7 +152,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
   #}
 
   spec {
-    replicas = 20
+    replicas = 5
     selector {
       app = "browsh-ssh-server"
     }

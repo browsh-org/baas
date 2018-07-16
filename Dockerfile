@@ -46,7 +46,7 @@ RUN dep ensure
 RUN go build -o browsh-ssh-server ssh-server.go
 
 # Now wrap the SSH server image around the original Browsh Docker image
-FROM tombh/texttop$BROWSH_IMAGE_TAG
+FROM browsh/browsh$BROWSH_IMAGE_TAG
 
 # Copy the SSH server built in the previous stage.
 COPY --from=0 /go/src/browsh_ssh_server/browsh-ssh-server /usr/local/bin

@@ -21,7 +21,7 @@ resource "kubernetes_ingress" "nginx-ingress" {
     namespace = "ingress"
     annotations {
       "kubernetes.io/ingress.class" = "nginx"
-      "nginx.ingress.kubernetes.io/server-snippet" = "if ($host = 'brow.sh' ) {return 301 https://brow.sh$request_uri;}"
+      "nginx.ingress.kubernetes.io/server-snippet" = "if ($host = 'brow.sh' ) {return 301 https://www.brow.sh$request_uri;}"
     }
   }
   spec {
@@ -45,10 +45,10 @@ resource "kubernetes_ingress" "nginx-ingress" {
       host = "brow.sh"
       http {
         path {
-          path_regex = "/*"
+          path_regex = "/"
           backend {
             service_name = "default-backend"
-            service_port = 80
+            service_port = 443
           }
         }
       }
@@ -68,6 +68,7 @@ resource "kubernetes_config_map" "nginx-ingress-main-config" {
   }
   data {
     enable-vts-status = true
+    hsts = false
   }
   depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
@@ -145,6 +146,7 @@ resource "kubernetes_service" "default-backend" {
   }
   spec {
     port {
+      name = "http"
       port = 80
       protocol = "TCP"
       target_port = 8080
@@ -204,7 +206,7 @@ resource "kubernetes_deployment" "nginx-controller" {
             "--configmap=$(POD_NAMESPACE)/nginx-ingress-controller-conf",
             "--tcp-services-configmap=$(POD_NAMESPACE)/nginx-ingress-tcp-conf",
             "--publish-service=$(POD_NAMESPACE)/nginx-ingress",
-            "--v=2"
+            "--v=4"
           ]
           env {
             name = "POD_NAME"
