@@ -3,7 +3,7 @@
 # gcloud container builds submit --config gce-docker-builder.yaml .
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '--build-arg', 'BROWSH_IMAGE_TAG=:v1.3.2', '-t', 'gcr.io/browsh-193210/baas', '.' ]
+  args: [ 'build', '--build-arg', 'BROWSH_IMAGE_TAG=:v1.4.6', '-t', 'gcr.io/browsh-193210/baas', '.' ]
 images:
 - 'gcr.io/browsh-193210/baas'
 

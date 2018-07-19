@@ -16,9 +16,9 @@ else
   echo "Starting your public session, which will only last 5 minutes and be logged."
   command="
     /app/browsh \
-      -startup-url $BROWSH_URL \
-      -time-limit 300 \
-      -debug
+      --startup-url $BROWSH_URL \
+      --time-limit 300 \
+      --debug
   "
 fi
 

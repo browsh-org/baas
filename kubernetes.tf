@@ -81,7 +81,7 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   spec {
-    replicas = 4
+    replicas = 6
     selector {
       app = "browsh-http-server"
     }
@@ -95,11 +95,31 @@ resource "kubernetes_deployment" "browsh-http-server" {
         node_selector {
           node-type = "preemptible"
         }
+        init_container {
+          name = "fix-perms"
+          image = "busybox"
+          command = [
+            "sh",
+            "-c",
+            "mkdir -p /app/.config/browsh/ && cp /etc/read-only/config.toml /app/.config/browsh/ && /bin/chmod -R 777 /app/.config/browsh/"
+          ]
+          volume_mount {
+            name = "browsh-config"
+            mount_path = "/etc/read-only"
+          }
+          volume_mount {
+            name = "rw-config"
+            mount_path = "/app/.config/browsh/"
+          }
+          security_context {
+            run_as_user = 0
+          }
+        }
         container {
           image = "browsh/browsh:v${chomp(file(".browsh_version"))}"
           #image = "gcr.io/browsh-193210/browsh"
           name  = "app"
-          command = ["/app/browsh", "-http-server", "-debug"]
+          command = ["/app/browsh", "--http-server-mode", "--debug"]
           port {
             container_port = 4333
           }
@@ -113,6 +133,20 @@ resource "kubernetes_deployment" "browsh-http-server" {
               cpu = "2000m"
             }
           }
+          volume_mount {
+            name = "rw-config"
+            mount_path = "/app/.config/browsh/"
+          }
+        }
+        volume {
+          name = "browsh-config"
+          config_map = {
+            name = "browsh-http-server-config"
+          }
+        }
+        volume {
+          name = "rw-config"
+          empty_dir = {}
         }
         toleration {
           key = "life_time"
@@ -122,6 +156,15 @@ resource "kubernetes_deployment" "browsh-http-server" {
         }
       }
     }
+  }
+}
+
+resource "kubernetes_config_map" "browsh-http-server-config" {
+  metadata {
+    name = "browsh-http-server-config"
+  }
+  data {
+    "config.toml" = "${file("./http-server-config.toml")}"
   }
 }
 
