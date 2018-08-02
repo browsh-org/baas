@@ -73,21 +73,6 @@ resource "kubernetes_config_map" "nginx-ingress-main-config" {
   depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
 }
 
-# TCP-specific load balancing rules
-resource "kubernetes_config_map" "nginx-ingress-tcp-config" {
-  metadata {
-    name = "nginx-ingress-tcp-conf"
-    namespace = "ingress"
-    labels {
-      app = "nginx-ingress-lb"
-    }
-  }
-  data {
-    "22" = "default/browsh-ssh-server:22"
-  }
-  depends_on = ["kubernetes_namespace.nginx-ingress-namespace"]
-}
-
 # A default backend for unmatched routes
 resource "kubernetes_deployment" "default-backend" {
   metadata {

@@ -1,6 +1,6 @@
 # Remember to use this in terraform-provider-kubernetes/kubernetes/resource_kubernetes_deployment.go:373
 # if name == "browsh-http-server" || name == "browsh-ssh-server" {
-#		cmd := "echo '" + string(data) + "' | ruby patch_toleration.rb"
+#		cmd := "echo '" + string(data) + "' | ruby cluster/patch_toleration.rb"
 #		output, err := exec.Command("bash", "-c", cmd).Output()
 #		if err != nil {
 #			panic("tombh hack failed")
