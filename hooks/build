@@ -4,5 +4,6 @@
 # follows the canonical version specified in the project root when being built from
 # hub.docker.com
 # This is because Dockerfiles don't support passing the result of `RUN` into `ENV`.
+cd ssh-server
 docker build --build-arg BROWSH_IMAGE_TAG=:v$(cat .browsh_version) -t $IMAGE_NAME .
 
