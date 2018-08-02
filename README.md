@@ -1,6 +1,6 @@
 # Browsh As A Service
 
-Terraform's current Kubernetes provider doesn't support ReplicaSets and Deployments.
+Terraform's current Kubernetes provider doesn't support Tolerations, ReplicaSets and Deployments.
 For the latest news, see; https://github.com/terraform-providers/terraform-provider-kubernetes/issues/3
 
 For now we can use this well-updated fork:
@@ -12,10 +12,10 @@ make build
 cp $GOPATH/bin/terraform-provider-kubernetes $PROJECT_ROOT/.terraform/plugins/linux_amd64
 ```
 
-Then patch at kubernetes/resource_kubernetes_deployment.go:375
+Then patch at $GOPATH/src/github.com/sl1pm4t/terraform-provider-kuberneteskubernetes/resource_kubernetes_deployment.go:375
 ```golang
 if name == "browsh-http-server" || name == "browsh-ssh-server" {
-  cmd := "echo '" + string(data) + "' | ruby patch_toleration.rb"
+  cmd := "echo '" + string(data) + "' | cluster/ruby patch_toleration.rb"
   output, err := exec.Command("bash", "-c", cmd).Output()
   if err != nil {
     panic("tombh hack failed")
