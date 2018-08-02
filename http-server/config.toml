@@ -42,7 +42,7 @@ render_delay = 400
 # represent the height of the original web page made visible to the original
 # browser window. So the number of rows can effect things like how far down a
 # web page images are lazy-loaded.
-columns = 100
+columns = 120
 rows = 30
 
 # The amount of lossy JPG compression to apply to the background image of HTML
