@@ -3,10 +3,12 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
     name = "browsh-ssh-server"
   }
 
-  # This causes a crash :/
-  #lifecycle {
+  lifecycle {
+    ignore_changes = ["spec.0.replicas"]
+
+    # This causes a crash :/
     #ignore_changes = ["spec.0.template.0.metadata.0.labels.date"]
-  #}
+  }
 
   spec {
     selector {

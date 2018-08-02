@@ -3,6 +3,10 @@ resource "kubernetes_deployment" "browsh-http-server" {
     name = "browsh-http-server"
   }
 
+  lifecycle {
+    ignore_changes = ["spec.0.replicas"]
+  }
+
   spec {
     selector {
       app = "browsh-http-server"
