@@ -32,8 +32,12 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
             container_port = 2222
           }
           volume_mount {
-            name = "rw-config"
+            name = "rw-config-ssh-key"
             mount_path = "/etc/browsh"
+          }
+          volume_mount {
+            name = "rw-config-ssh-server-config"
+            mount_path = "/app/.config/browsh/"
           }
           resources {
             requests {
@@ -58,19 +62,41 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           command = [
             "sh",
             "-c",
-            "cp /etc/browsh-ro/id_rsa /etc/browsh && /bin/chmod 600 /etc/browsh/id_rsa && /bin/chown 1000 /etc/browsh/id_rsa"
+            "cp /etc/browsh-ro-ssh-key/id_rsa /etc/browsh && /bin/chmod 600 /etc/browsh/id_rsa && /bin/chown 1000 /etc/browsh/id_rsa && mkdir -p /app/.config/browsh/ && cp /etc/browsh-ro-config/config.toml /app/.config/browsh/ && /bin/chmod -R 777 /app/.config/browsh/"
           ]
           volume_mount {
+            # The read-only mount of the k8s SSH secrets
             name = "browsh-ssh-rsa-key"
-            mount_path = "/etc/browsh-ro"
+            mount_path = "/etc/browsh-ro-ssh-key"
           }
           volume_mount {
-            name = "rw-config"
+            # The read-only mount of the k8s config map for the Browsh config.toml
+            name = "browsh-config"
+            mount_path = "/etc/browsh-ro-config"
+          }
+          volume_mount {
+            # The read-write helper mount to copy the SSH keys
+            name = "rw-config-ssh-key"
             mount_path = "/etc/browsh"
+          }
+          volume_mount {
+            # The read-write helper mount to copy the Browsh config.toml
+            name = "rw-config-ssh-server-config"
+            mount_path = "/app/.config/browsh/"
           }
           security_context {
             run_as_user = 0
           }
+        }
+        volume {
+          name = "browsh-config"
+          config_map = {
+            name = "browsh-ssh-server-config"
+          }
+        }
+        volume {
+          name = "rw-config-ssh-server-config"
+          empty_dir = {}
         }
         volume {
           name = "browsh-ssh-rsa-key"
@@ -83,11 +109,20 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
           }
         }
         volume {
-          name = "rw-config"
+          name = "rw-config-ssh-key"
           empty_dir = {}
         }
       }
     }
+  }
+}
+
+resource "kubernetes_config_map" "browsh-ssh-server-config" {
+  metadata {
+    name = "browsh-ssh-server-config"
+  }
+  data {
+    "config.toml" = "${file("./ssh-server/config.toml")}"
   }
 }
 

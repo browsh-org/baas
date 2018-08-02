@@ -1,0 +1,32 @@
+# See; https://www.brow.sh/donate/
+# By showing your support you can disable the app's branding and nags to donate.
+browsh_supporter = "I have shown my support for Browsh"
+
+# The base query when a non-URL is entered into the URL bar
+default_search_engine_base = "https://www.google.com/search?q="
+
+# The mobile user agent for forcing web pages to use their mobile layout
+mobile_user_agent = "Mozilla/5.0 (Android 7.0; Mobile; rv:54.0) Gecko/58.0 Firefox/58.0"
+
+[browsh] # Browsh internals
+websocket-port = 3334
+
+[firefox]
+# The path to your Firefox binary
+path = "firefox"
+# Browsh has its own profile, seperate from the normal user's. But you can change that.
+profile = "browsh-default"
+# Don't let Browsh launch Firefox, but make it try to connect to an existing one. Note
+# it will need to have been launched with the '--marionette' flag.
+use-existing = false
+# Launch Firefox in with its visible GUI window. Useful for setting up the Browsh profile.
+with-gui = false
+
+[tty]
+# The time in milliseconds between requesting a new TTY-sized pixel frame.
+# This is essentially the frame rate for graphics. Lower values make for smoother
+# animations and feedback, but also increases the CPU load.
+small_pixel_frame_rate = 250
+
+[http-server]
+
