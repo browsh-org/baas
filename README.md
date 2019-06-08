@@ -1,5 +1,16 @@
 # Browsh As A Service
 
+## Setup
+
+Install the Google Cloud SDK and `kubectl`. Then:
+
+`gcloud container clusters get-credentials browsh-cluster --region asia-southeast1-a`
+
+`export GOOGLE_APPLICATION_CREDENTIALS=$ADC_FILE_PATH`
+
+Eg; `ADC_FILE_PATH=~/.config/gcloud/legacy_credentials/tom@tombh.co.uk/adc.json`
+
+### Patches
 Terraform's current Kubernetes provider doesn't support Tolerations, ReplicaSets and Deployments.
 For the latest news, see; https://github.com/terraform-providers/terraform-provider-kubernetes/issues/3
 
@@ -27,7 +38,7 @@ if name == "browsh-http-server" || name == "browsh-ssh-server" {
 After applying everything you also currently need to:
   1. Manually apply the Cluster Roles, see `nginx-ingress-controller.yaml`
 
-SSL certs:
+## SSL certs
 ```
 sudo certbot certonly -d '*.brow.sh' -d 'brow.sh' --dns-google --dns-google-credentials etc/gce-dns-admin.json --server https://acme-v02.api.letsencrypt.org/directory
 sudo cp /etc/letsencrypt/live/brow.sh/cert.pem etc/browsh-tls.crt

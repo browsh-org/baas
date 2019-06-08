@@ -41,12 +41,12 @@ ENV dep_url=https://github.com/golang/dep/releases/download/v$GOLANG_DEP_VERSION
 RUN curl -L -o $GOPATH/bin/dep $dep_url
 RUN chmod +x $GOPATH/bin/dep
 WORKDIR $GOPATH/src/browsh_ssh_server
-ADD ssh-server/ $GOPATH/src/browsh_ssh_server
+ADD . $GOPATH/src/browsh_ssh_server
 RUN dep ensure
 RUN go build -o browsh-ssh-server ssh-server.go
 
 # Now wrap the SSH server image around the original Browsh Docker image
-FROM browsh/browsh$BROWSH_IMAGE_TAG
+FROM gcr.io/browsh-193210/browsh
 
 # Copy the SSH server built in the previous stage.
 COPY --from=0 /go/src/browsh_ssh_server/browsh-ssh-server /usr/local/bin
@@ -65,8 +65,7 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 ENV LANG en_US.UTF-8
 
 USER user
-ADD ssh-server/start-browsh-session.sh /usr/local/bin/
-ADD .browsh_version /app
+ADD start-browsh-session.sh /usr/local/bin/
 RUN touch /app/debug.log && echo "Browsh logs start" > /app/debug.log
 
 CMD browsh-ssh-server -host-key /etc/browsh/id_rsa & touch /app/debug.log && tail -f /app/debug.log

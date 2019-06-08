@@ -19,7 +19,7 @@ resource "kubernetes_ingress" "nginx-ingress" {
   metadata {
     name = "nginx-ingress"
     namespace = "ingress"
-    annotations {
+    annotations = {
       "kubernetes.io/ingress.class" = "nginx"
       "nginx.ingress.kubernetes.io/server-snippet" = "if ($host = 'brow.sh' ) {return 301 https://www.brow.sh$request_uri;}"
     }

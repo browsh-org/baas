@@ -3,7 +3,7 @@ set -e
 
 BROWSH_URL=${BROWSH_URL:-https://www.brow.sh/ssh-welcome}
 
-browsh_version=$(cat .browsh_version)
+browsh_version=$(/app/browsh --version)
 
 echo "Welcome to brow.sh ($browsh_version)"
 

@@ -4,7 +4,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
   }
 
   lifecycle {
-    ignore_changes = ["spec.0.replicas"]
+    ignore_changes = ["spec.replicas"]
 
     # This causes a crash :/
     #ignore_changes = ["spec.0.template.0.metadata.0.labels.date"]
@@ -121,7 +121,7 @@ resource "kubernetes_config_map" "browsh-ssh-server-config" {
   metadata {
     name = "browsh-ssh-server-config"
   }
-  data {
+  data = {
     "config.toml" = "${file("./ssh-server/config.toml")}"
   }
 }
@@ -131,8 +131,8 @@ resource "kubernetes_horizontal_pod_autoscaler" "ssh-server-scaler" {
     name = "ssh-server-scaler"
   }
   spec {
-    min_replicas = 2
-    max_replicas = 40
+    min_replicas = 1
+    max_replicas = 2
     target_cpu_utilization_percentage = "80"
     scale_target_ref {
       kind = "Deployment"
@@ -179,7 +179,7 @@ resource "kubernetes_config_map" "nginx-ingress-tcp-config" {
       app = "nginx-ingress-lb"
     }
   }
-  data {
+  data = {
     "22" = "default/browsh-ssh-server:22"
   }
 }

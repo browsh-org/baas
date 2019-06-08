@@ -4,7 +4,7 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   lifecycle {
-    ignore_changes = ["spec.0.replicas"]
+    ignore_changes = ["spec.replicas"]
   }
 
   spec {
@@ -89,7 +89,7 @@ resource "kubernetes_config_map" "browsh-http-server-config" {
   metadata {
     name = "browsh-http-server-config"
   }
-  data {
+  data = {
     "config.toml" = "${file("./http-server/config.toml")}"
   }
 }
@@ -113,7 +113,7 @@ resource "kubernetes_secret" "browsh-tls" {
   metadata {
     name = "browsh-tls"
   }
-  data {
+  data = {
     tls.crt = "${file("etc/browsh-tls.crt")}"
     tls.key = "${file("etc/browsh-tls.key")}"
   }
@@ -123,7 +123,7 @@ resource "kubernetes_secret" "browsh-tls" {
 resource "kubernetes_ingress" "http-server-ingress" {
   metadata {
     name = "browsh-ingress"
-    annotations {
+    annotations = {
       "kubernetes.io/ingress.class" = "gce"
       "kubernetes.io/ingress.global-static-ip-name" = "browsh-http-server"
     }

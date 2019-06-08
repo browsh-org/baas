@@ -42,7 +42,7 @@ resource "google_container_node_pool" "browsh-node-pool" {
   # NB. changes to this destroy the entire node pool
   node_config {
     # https://cloud.google.com/compute/docs/machine-types
-    machine_type = "n1-highcpu-4"
+    machine_type = "n1-standard-2"
     preemptible = "true"
     labels {
       node-type = "preemptible"
@@ -61,8 +61,8 @@ resource "google_container_node_pool" "browsh-node-pool" {
 
   // Changing this doesn't seem to cause any app downtime
   autoscaling {
-    min_node_count = 3
-    max_node_count = 20
+    min_node_count = 1
+    max_node_count = 2
   }
 }
 
