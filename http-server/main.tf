@@ -4,23 +4,22 @@ resource "kubernetes_deployment" "browsh-http-server" {
   }
 
   lifecycle {
-    ignore_changes = ["spec.replicas"]
+    ignore_changes = ["spec[0].replicas"]
   }
 
   spec {
     selector {
-      app = "browsh-http-server"
+      match_labels = {
+        app = "browsh-http-server"
+      }
     }
     template {
       metadata {
-        labels {
+        labels = {
           app = "browsh-http-server"
         }
       }
       spec {
-        node_selector {
-          node-type = "preemptible"
-        }
         init_container {
           name = "fix-perms"
           image = "busybox"
@@ -66,19 +65,13 @@ resource "kubernetes_deployment" "browsh-http-server" {
         }
         volume {
           name = "browsh-config"
-          config_map = {
+          config_map {
             name = "browsh-http-server-config"
           }
         }
         volume {
           name = "rw-config"
-          empty_dir = {}
-        }
-        toleration {
-          key = "life_time"
-          operator = "Equal"
-          value = "preemptible"
-          effect = "NoSchedule"
+          empty_dir {}
         }
       }
     }
@@ -90,13 +83,13 @@ resource "kubernetes_config_map" "browsh-http-server-config" {
     name = "browsh-http-server-config"
   }
   data = {
-    "config.toml" = "${file("./http-server/config.toml")}"
+    "config.toml" = file("./http-server/config.toml")
   }
 }
 
-resource "kubernetes_horizontal_pod_autoscaler" "http-server-sacler" {
+resource "kubernetes_horizontal_pod_autoscaler" "http-server-scaler" {
   metadata {
-    name = "http-server-sacler"
+    name = "http-server-scaler"
   }
   spec {
     min_replicas = 2
@@ -114,22 +107,24 @@ resource "kubernetes_secret" "browsh-tls" {
     name = "browsh-tls"
   }
   data = {
-    tls.crt = "${file("etc/browsh-tls.crt")}"
-    tls.key = "${file("etc/browsh-tls.key")}"
+    "tls.crt" = file("etc/browsh-tls.crt")
+    "tls.key" = file("etc/browsh-tls.key")
   }
 }
 
-// It seems like changes to this might disbale the CDN
 resource "kubernetes_ingress" "http-server-ingress" {
   metadata {
     name = "browsh-ingress"
     annotations = {
-      "kubernetes.io/ingress.class" = "gce"
-      "kubernetes.io/ingress.global-static-ip-name" = "browsh-http-server"
+      "kubernetes.io/ingress.class" = "nginx"
     }
   }
   spec {
     tls {
+      hosts = [
+        "html.brow.sh",
+        "text.brow.sh"
+      ]
       secret_name = "browsh-tls"
     }
     backend {
@@ -140,7 +135,7 @@ resource "kubernetes_ingress" "http-server-ingress" {
       host = "html.brow.sh"
       http {
         path {
-          path_regex = "/"
+          path = "/*"
           backend {
             service_name = "browsh-http-server"
             service_port = 80
@@ -152,7 +147,7 @@ resource "kubernetes_ingress" "http-server-ingress" {
       host = "text.brow.sh"
       http {
         path {
-          path_regex = "/"
+          path = "/*"
           backend {
             service_name = "browsh-http-server"
             service_port = 80
@@ -169,19 +164,13 @@ resource "kubernetes_service" "browsh-http-server" {
   }
 
   spec {
-    type = "NodePort"
-    selector {
+    selector = {
       app = "browsh-http-server"
     }
 
     port {
       name = "http"
       port        = 80
-      target_port = 4333
-    }
-    port {
-      name = "https"
-      port        = 443
       target_port = 4333
     }
   }

@@ -4,26 +4,22 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
   }
 
   lifecycle {
-    ignore_changes = ["spec.replicas"]
-
-    # This causes a crash :/
-    #ignore_changes = ["spec.0.template.0.metadata.0.labels.date"]
+    ignore_changes = ["spec[0].replicas"]
   }
 
   spec {
     selector {
-      app = "browsh-ssh-server"
+      match_labels = {
+        app = "browsh-ssh-server"
+      }
     }
     template {
       metadata {
-        labels {
+        labels = {
           app = "browsh-ssh-server"
         }
       }
       spec {
-        node_selector {
-          node-type = "preemptible"
-        }
         container {
           image = "gcr.io/browsh-193210/baas"
           image_pull_policy = "Always"
@@ -49,12 +45,6 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
               cpu = "2000m"
             }
           }
-        }
-        toleration {
-          key = "life_time"
-          operator = "Equal"
-          value = "preemptible"
-          effect = "NoSchedule"
         }
         init_container {
           name = "fix-perms"
@@ -90,13 +80,13 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
         }
         volume {
           name = "browsh-config"
-          config_map = {
+          config_map {
             name = "browsh-ssh-server-config"
           }
         }
         volume {
           name = "rw-config-ssh-server-config"
-          empty_dir = {}
+          empty_dir {}
         }
         volume {
           name = "browsh-ssh-rsa-key"
@@ -110,7 +100,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
         }
         volume {
           name = "rw-config-ssh-key"
-          empty_dir = {}
+          empty_dir {}
         }
       }
     }
@@ -122,7 +112,7 @@ resource "kubernetes_config_map" "browsh-ssh-server-config" {
     name = "browsh-ssh-server-config"
   }
   data = {
-    "config.toml" = "${file("./ssh-server/config.toml")}"
+    "config.toml" = file("./ssh-server/config.toml")
   }
 }
 
@@ -132,7 +122,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "ssh-server-scaler" {
   }
   spec {
     min_replicas = 1
-    max_replicas = 2
+    max_replicas = 10
     target_cpu_utilization_percentage = "80"
     scale_target_ref {
       kind = "Deployment"
@@ -145,8 +135,8 @@ resource "kubernetes_secret" "browsh-ssh-rsa-key" {
   metadata {
     name = "browsh-ssh-rsa-key"
   }
-  data {
-    id_rsa_private_key = "${file("etc/browsh_id_rsa")}"
+  data = {
+    id_rsa_private_key = file("etc/browsh_id_rsa")
   }
 }
 
@@ -157,7 +147,7 @@ resource "kubernetes_service" "browsh-ssh-server" {
   }
 
   spec {
-    selector {
+    selector = {
       app = "browsh-ssh-server"
     }
 
@@ -165,8 +155,6 @@ resource "kubernetes_service" "browsh-ssh-server" {
       port        = 22
       target_port = 2222
     }
-
-    type = "NodePort"
   }
 }
 
@@ -174,9 +162,10 @@ resource "kubernetes_service" "browsh-ssh-server" {
 resource "kubernetes_config_map" "nginx-ingress-tcp-config" {
   metadata {
     name = "nginx-ingress-tcp-conf"
-    namespace = "ingress"
-    labels {
-      app = "nginx-ingress-lb"
+    namespace = "ingress-nginx"
+    labels = {
+      "app.kubernetes.io/name"    = "ingress-nginx"
+      "app.kubernetes.io/part-of" = "ingress-nginx"
     }
   }
   data = {

@@ -3,3 +3,4 @@ etc/*
 terraform*
 .terraform/*
 *.log
+backup
