@@ -8,7 +8,7 @@ provider "digitalocean" {
 resource "digitalocean_kubernetes_cluster" "browsh" {
   name    = "browsh"
   region  = "sfo2"
-  version = "1.14.1-do.4"
+  version = "1.15.2-do.0"
 
   node_pool {
     name       = "browsh-pool"

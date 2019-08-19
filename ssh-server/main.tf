@@ -3,11 +3,8 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
     name = "browsh-ssh-server"
   }
 
-  lifecycle {
-    ignore_changes = ["spec[0].replicas"]
-  }
-
   spec {
+    replicas = 2
     selector {
       match_labels = {
         app = "browsh-ssh-server"
@@ -21,7 +18,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
       }
       spec {
         container {
-          image = "gcr.io/browsh-193210/baas"
+          image = "browsh/baas:v1.6.4"
           image_pull_policy = "Always"
           name  = "app"
           port {
@@ -41,7 +38,7 @@ resource "kubernetes_deployment" "browsh-ssh-server" {
               cpu = "250m"
             }
             limits {
-              memory = "4Gi"
+              memory = "2Gi"
               cpu = "2000m"
             }
           }

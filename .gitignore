@@ -1,6 +1,7 @@
 vendor
 etc/*
 terraform*
+.terraform*
 .terraform/*
 *.log
 backup
