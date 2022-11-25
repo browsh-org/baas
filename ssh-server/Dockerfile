@@ -4,7 +4,7 @@ ARG BROWSH_IMAGE_TAG
 # First build our custom SSH server
 # The Browsh SSH server is a custom Go server that launches Browsh upon a successful
 # SSH connection.
-FROM bitnami/minideb:stretch
+FROM bitnami/minideb:bullseye
 
 RUN install_packages \
       curl \
@@ -46,7 +46,7 @@ RUN dep ensure
 RUN go build -o browsh-ssh-server ssh-server.go
 
 # Now wrap the SSH server image around the original Browsh Docker image
-FROM browsh/browsh:v1.6.4
+FROM browsh/browsh:v1.8.0
 
 # Copy the SSH server built in the previous stage.
 COPY --from=0 /go/src/browsh_ssh_server/browsh-ssh-server /usr/local/bin
@@ -54,19 +54,28 @@ COPY --from=0 /usr/local/bin/mosh-server /usr/local/bin
 
 USER root
 RUN install_packages \
-      locales \
-      libprotobuf10 \
-      htop \
-      netcat
-
-RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    update-locale LANG=en_US.UTF-8
-ENV LANG en_US.UTF-8
+      xvfb \
+      libgtk-3-0 \
+      curl \
+      ca-certificates \
+      libdbus-glib-1-2 \
+      procps \
+      libasound2 \
+      libxtst6
 
 USER user
 ADD start-browsh-session.sh /usr/local/bin/
+RUN ln -s /app/bin/browsh /app/browsh; ln -s /app/bin/firefox /app/firefox
 RUN touch /app/debug.log && echo "Browsh logs start" > /app/debug.log
 
-CMD browsh-ssh-server -host-key /etc/browsh/id_rsa & touch /app/debug.log && tail -f /app/debug.log
+# Firefox behaves quite differently to normal on its first run, so by getting
+# that over and done with here when there's no user to be dissapointed means
+# that all future runs will be consistent.
+RUN TERM=xterm script \
+  --return \
+  -c "/app/bin/browsh" \
+  /dev/null \
+  >/dev/null & \
+  sleep 10
 
+CMD browsh-ssh-server -host-key /etc/browsh/id_rsa & touch /app/debug.log && tail -f /app/debug.log
